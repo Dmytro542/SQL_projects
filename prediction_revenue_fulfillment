@@ -1,0 +1,45 @@
+WITH
+ CTE1 AS (
+ SELECT
+   rp.date,
+   0 AS revenue,
+   SUM(rp.predict) AS revenue_predict
+ FROM
+   `data-analytics-mate.DA.revenue_predict` rp
+ GROUP BY
+   date
+ UNION ALL
+ SELECT
+   s.date,
+   SUM(p.price) AS revenue,
+   0 AS revenue_predict
+ FROM
+   `data-analytics-mate.DA.order` o
+ JOIN
+   `data-analytics-mate.DA.session` s
+ ON
+   o.ga_session_id=s.ga_session_id
+ JOIN
+   `data-analytics-mate.DA.product`p
+ ON
+   o.item_id=p.item_id
+ GROUP BY
+   date),
+ CTE2 AS (
+ SELECT
+   date,
+   sum (revenue) revenue,
+   sum (revenue_predict) revenue_predict
+ FROM
+   CTE1
+ GROUP BY
+   date)
+SELECT
+ date,
+ revenue,
+ SUM(revenue) OVER(ORDER BY date) AS acc_revenue,
+ revenue_predict,
+ SUM(revenue_predict) OVER(ORDER BY date) AS acc_revenue_predict,
+ SUM(revenue) OVER(ORDER BY date)/SUM(revenue_predict) OVER(ORDER BY date) * 100 AS prediction_fulfillment_percent
+FROM
+ CTE2
